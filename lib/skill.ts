@@ -19,15 +19,37 @@ function parseFrontmatter(content: string): Record<string, string> {
   if (!match || !match[1]) return frontmatter
 
   const lines = match[1].split('\n')
-  for (const line of lines) {
+  const multilineKeys = new Set(['description', 'title', 'when_to_use', 'summary'])
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i] ?? ''
     const colonIndex = line.indexOf(':')
     if (colonIndex === -1) continue
 
     const key = line.slice(0, colonIndex).trim()
-    const rawValue = line.slice(colonIndex + 1).trim()
-    const value = rawValue.replace(/^["'](.*)["']$/, '$1')
+    if (!key) continue
 
-    if (key && value) {
+    const rawValue = line.slice(colonIndex + 1).trim()
+    let value = rawValue.replace(/^["'](.*)["']$/, '$1')
+
+    if (!value && multilineKeys.has(key)) {
+      const collected: string[] = []
+      let nextIndex = i + 1
+
+      while (nextIndex < lines.length) {
+        const nextLine = lines[nextIndex] ?? ''
+        if (nextLine.trim() === '' || !/^\s+/.test(nextLine)) break
+        collected.push(nextLine.trim())
+        nextIndex++
+      }
+
+      if (collected.length > 0) {
+        value = collected.join(' ')
+        i = nextIndex - 1
+      }
+    }
+
+    if (value) {
       frontmatter[key] = value
     }
   }
