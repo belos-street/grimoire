@@ -1,19 +1,19 @@
 # @belos-street/skill-kit
 
-> CLI tool for managing AI Agent skill documentation - generate agents and skill directories
+> CLI tool for installing AI Agent skills into a project's `.agents/skills/` directory
 
 ## About
 
-`skill-kit` is a CLI tool that helps you manage and organize AI Agent skill documentation. It provides an interactive interface to browse, select, and install skills into your project, automatically generating necessary configuration files.
+`skill-kit` is a CLI tool for installing reusable AI Agent skills into a project. It installs to `.agents/skills/` by default, supports non-interactive JSON output for agent-driven use, and prints the rows to add to the skill table in `AGENTS.md` instead of editing it.
 
 ## Features
 
-- Interactive multi-select skill selection
-- Auto-generate `agents.md` configuration file
-- List and view detailed skill information
+- Non-interactive installs for agent use: `add <skill...> --json`
+- Installs to `./.agents/skills` by default (configurable with `--to`)
+- JSON catalog via `list --json`
+- Duplicate detection with opt-in `--force` overwrite
+- Prints ready-to-paste rows for the skill table in `AGENTS.md`; never rewrites it
 - Built with Bun for fast TypeScript execution
-- Duplicate detection and smart conflict resolution
-- Colorful terminal output for better UX
 
 ## Installation
 
@@ -65,51 +65,50 @@ Available skills:
 Total: 24 skills
 ```
 
-### Add Skills (Interactive)
+### Add Skills
 
-Add skills to current directory via interactive selection:
+Non-interactive (recommended for agents):
+
+```bash
+skill-kit add vue pinia --to .agents/skills --json
+skill-kit add vue --to .agents/skills --force   # update an installed skill
+```
+
+`--to` defaults to `.agents/skills`. Output is a single JSON object:
+
+```json
+{
+  "ok": true,
+  "target": "/path/to/project/.agents/skills",
+  "results": [
+    {
+      "skillName": "vue",
+      "status": "added",
+      "path": "/path/to/project/.agents/skills/vue",
+      "entryFile": "skill.md",
+      "description": "Vue 3 Composition API..."
+    }
+  ]
+}
+```
+
+`status` is one of `added`, `updated`, `skipped`, `failed`; the process exits non-zero when any skill fails.
+
+Interactive (terminal use):
 
 ```bash
 skill-kit add
 ```
 
-You'll see a multi-select interface:
+After installing, the CLI prints Markdown rows for the skill table in your project's `AGENTS.md`. It deliberately does not edit or overwrite `AGENTS.md`.
 
-```
-Select skills to add:
+### List Skills as JSON
 
-  ant-design-vue
-  belos-street
-  bun
-  rag
-  react
-  superpowers
-  vue-best-practices
-  ...
-
-Hint: Space to select, Enter to confirm
+```bash
+skill-kit list --json
 ```
 
-After selection, the tool will:
-
-1. Generate selected skills to `./skills/` directory
-2. Generate `agents.md` configuration file
-3. Show add/skip summary
-
-Output example:
-
-```
-Copying skills...
-
-  bun: added
-  nextjs: added
-  pinia: added
-
-Done! 3 added, 0 skipped
-
-Generating agents.md...
-agents.md generated!
-```
+Returns `[{ name, description, tags, references, entryFile }]`, suitable for agent-driven skill selection.
 
 ### View Skill Info
 
@@ -290,18 +289,16 @@ skill-kit/
 │   ├── cli/                 # Command line interface
 │   │   └── index.ts        # CLI commands (list, add, info)
 │   ├── fs/                 # File system utilities
-│   │   └── index.ts        # Copy, read, write operations
-│   ├── generator/          # Skill generator
-│   │   └── index.ts        # Add skills to directory
+│   │   └── index.ts        # Copy, ensure, remove directory
+│   ├── generator/          # Skill installer
+│   │   └── index.ts        # Add/update skills in a target directory
 │   ├── logger/             # Logging utilities
 │   │   └── index.ts        # Colorful console output
-│   ├── skill/              # Skill management
-│   │   └── index.ts        # Read and parse skills
-│   └── template/           # Template generator
-│       └── index.ts        # Generate agents.md
+│   └── skill/              # Skill management
+│       └── index.ts        # Read and parse SKILL.md/skill.md
 ├── scripts/
 │   └── publish.ts          # Publish script
-├── skills/                 # Built-in skills (23 top-level skills)
+├── skills/                 # Built-in skills (24 top-level skills)
 │   ├── superpowers/        # Integrated from obra/superpowers (14 sub-skills)
 │   ├── bun/
 │   ├── nextjs/
@@ -310,6 +307,7 @@ skill-kit/
 │   └── ... (23 other skills)
 ├── index.ts                # Entry point
 ├── package.json
+├── AGENTS.md               # Agent-facing project guide
 └── README.md
 ```
 
@@ -319,6 +317,13 @@ skill-kit/
 # List all skills
 bun run ./index.ts list
 
+# List as JSON (agent use)
+bun run ./index.ts list --json
+
+# Non-interactive install / update
+bun run ./index.ts add vue pinia --to .agents/skills --json
+bun run ./index.ts add vue --to .agents/skills --force
+
 # Interactive add skills
 bun run ./index.ts add
 
@@ -326,7 +331,7 @@ bun run ./index.ts add
 bun run ./index.ts info <skill-name>
 ```
 
-**Note:** The CLI scans top-level directories under `skills/` and reads each lowercase `skill.md`. The 14 sub-skills inside `superpowers/` are managed as part of the `superpowers` collection and are not listed individually by the CLI.
+**Note:** The CLI scans top-level directories under `skills/` and accepts either `SKILL.md` or `skill.md`. Reference counts include `references/`, `reference/`, and `rules/`. The 14 sub-skills inside `superpowers/` are installed as part of the `superpowers` collection and are not listed individually by the CLI.
 
 ## Acknowledgments
 
