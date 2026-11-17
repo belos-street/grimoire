@@ -129,8 +129,8 @@ Once the summary is presented, propose the next step based on requirement maturi
 
 | Requirement State | Recommended Next Step |
 |------------------|----------------------|
-| Design exploration needed | Invoke [brainstorming](../brainstorming/SKILL.md) |
-| Requirements fully clear, multi-step task | Invoke [writing-plans](../writing-plans/SKILL.md) |
+| Design exploration needed | Invoke [brainstorming](../superpowers/brainstorming/SKILL.md) |
+| Requirements fully clear, multi-step task | Invoke [writing-plans](../superpowers/writing-plans/SKILL.md) |
 | Requirements simple, single-step | Proceed directly to implementation |
 
 **Transition message template:**
