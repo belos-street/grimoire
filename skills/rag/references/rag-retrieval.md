@@ -100,4 +100,5 @@ function fuse(lists: RetrievedChunk[][]): RetrievedChunk[] {
 ## 四、未来增强（按需启用，留档）
 
 - 论文两阶段检索的"重排"阶段 → 引入 bge-reranker / bce-reranker（本地可跑）对 top-N 候选二次排序（详见 `rag-rerank.md`）；
+- 编号/型号密集、无 GPU 或强可解释场景 → 以词法驱动的查询时多跳为主通道（详见 `rag-lexical-multihop.md`）；本文的 keyword 通道相当于其 0 跳退化形态；
 - 检索质量评估（召回率/命中位置）→ 参考 `iknow-paper-notes.md` 的 LLM-as-judge 方法（详见 `rag-evaluation.md`）。

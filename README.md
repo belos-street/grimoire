@@ -154,7 +154,7 @@ This collection contains 24 skills covering web frontend/backend, mobile, AI, an
 | [nestjs-best-practices](skills/nestjs-best-practices/SKILL.md)         | NestJS architecture and best practices                       | 42          |
 | [nextjs](skills/nextjs/skill.md)                                       | Next.js React framework                                      | 9           |
 | [pinia](skills/pinia/skill.md)                                         | Vue state management                                         | 33          |
-| [rag](skills/rag/skill.md)                                             | General RAG methodology (9 modules, based on iKnow ASE 2025) | 10          |
+| [rag](skills/rag/skill.md)                                             | General RAG methodology (11 modules, based on iKnow ASE 2025 + SAG2) | 12          |
 | [react](skills/react/skill.md)                                         | React library                                                | 3           |
 | [react-best-practices](skills/react-best-practices/skill.md)           | React best practices                                         | 62          |
 | [react-native-skills](skills/react-native-skills/SKILL.md)             | React Native & Expo mobile development best practices        | 38          |
@@ -214,7 +214,7 @@ This collection contains 24 skills covering web frontend/backend, mobile, AI, an
 **AI & LLM**
 
 - [langchain](skills/langchain/skill.md) - LangChain framework for building AI agents
-- [rag](skills/rag/skill.md) - General RAG methodology (loading/ingestion/query/retrieval/rerank/generation/multi-turn/GraphRAG/evaluation, based on iKnow ASE 2025)
+- [rag](skills/rag/skill.md) - General RAG methodology (selection/loading/ingestion/query/retrieval/rerank/generation/multi-turn/GraphRAG/lightweight lexical multi-hop/evaluation, based on iKnow ASE 2025 + SAG2)
 
 **Workflow & Process**
 
