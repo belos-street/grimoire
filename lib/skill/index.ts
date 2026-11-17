@@ -1,10 +1,13 @@
-import { readdir, readFile } from 'fs/promises'
+import { readdir, readFile, stat } from 'fs/promises'
 import { join } from 'path'
+
+const REFERENCE_DIRS = ['references', 'reference', 'rules']
 
 export interface Skill {
   name: string
   description: string
   path: string
+  entryFile: string
   referenceCount: number
   frontmatter: Record<string, string>
 }
@@ -21,7 +24,8 @@ function parseFrontmatter(content: string): Record<string, string> {
     if (colonIndex === -1) continue
 
     const key = line.slice(0, colonIndex).trim()
-    const value = line.slice(colonIndex + 1).trim()
+    const rawValue = line.slice(colonIndex + 1).trim()
+    const value = rawValue.replace(/^["'](.*)["']$/, '$1')
 
     if (key && value) {
       frontmatter[key] = value
@@ -31,9 +35,29 @@ function parseFrontmatter(content: string): Record<string, string> {
   return frontmatter
 }
 
+async function isDirectory(path: string): Promise<boolean> {
+  try {
+    return (await stat(path)).isDirectory()
+  } catch {
+    return false
+  }
+}
+
 export async function getSkillsDir(): Promise<string> {
-  const currentDir = import.meta.dir
-  return join(currentDir, '..', '..', 'skills')
+  const sourceDir = join(import.meta.dir, '..', '..', 'skills')
+  const candidates = [
+    process.env.SKILL_KIT_HOME,
+    join(import.meta.dir, '..', '..', 'skills'),
+    join(import.meta.dir, '..', 'skills'),
+    join(import.meta.dir, 'skills'),
+    join(process.cwd(), 'skills')
+  ]
+
+  for (const dir of candidates) {
+    if (dir && (await isDirectory(dir))) return dir
+  }
+
+  return sourceDir
 }
 
 export async function getAllSkills(): Promise<Skill[]> {
@@ -47,32 +71,36 @@ export async function getAllSkills(): Promise<Skill[]> {
       if (!entry.isDirectory()) continue
 
       const skillPath = join(skillsDir, entry.name)
-      const skillMdPath = join(skillPath, 'skill.md')
-
       let description = ''
       let frontmatter: Record<string, string> = {}
+      let entryFile = ''
+
       try {
-        const content = await readFile(skillMdPath, 'utf-8')
-        const match = content.match(/description:\s*(.+)/)
-        description = match?.[1] || ''
-        frontmatter = parseFrontmatter(content)
+        const files = await readdir(skillPath)
+        const mainFile = files.find((file) => /^skill\.md$/i.test(file))
+
+        if (mainFile) {
+          entryFile = mainFile
+          const content = await readFile(join(skillPath, mainFile), 'utf-8')
+          frontmatter = parseFrontmatter(content)
+          description =
+            frontmatter.description ||
+            content.match(/description:\s*(.+)/)?.[1]?.trim() ||
+            ''
+        }
       } catch {
         description = ''
         frontmatter = {}
       }
 
       let referenceCount = 0
-      try {
-        const referenceDir = join(skillPath, 'reference')
-        const refEntries = await readdir(referenceDir)
-        referenceCount = refEntries.filter((f) => f.endsWith('.md')).length
-      } catch {
+      for (const dirName of REFERENCE_DIRS) {
         try {
-          const referencesDir = join(skillPath, 'references')
-          const refEntries = await readdir(referencesDir)
-          referenceCount = refEntries.filter((f) => f.endsWith('.md')).length
+          const refEntries = await readdir(join(skillPath, dirName))
+          referenceCount = refEntries.filter((file) => file.endsWith('.md')).length
+          break
         } catch {
-          referenceCount = 0
+          continue
         }
       }
 
@@ -80,6 +108,7 @@ export async function getAllSkills(): Promise<Skill[]> {
         name: entry.name,
         description,
         path: skillPath,
+        entryFile: entryFile || 'SKILL.md',
         referenceCount,
         frontmatter
       })
@@ -95,8 +124,4 @@ export async function getAllSkills(): Promise<Skill[]> {
 export async function getSkillByName(name: string): Promise<Skill | null> {
   const skills = await getAllSkills()
   return skills.find((s) => s.name === name) || null
-}
-
-export function getSkillNames(skills: Skill[]): string[] {
-  return skills.map((s) => s.name)
 }

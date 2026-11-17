@@ -1,20 +1,24 @@
 import { getSkillByName } from '../skill/index'
-import { copyDir, fileExists, ensureDir } from '../fs/index'
+import { copyDir, fileExists, ensureDir, removeDir } from '../fs/index'
 import { join } from 'path'
 
 export interface AddOptions {
   skills: string[]
   targetDir: string
+  force?: boolean
 }
 
 export interface AddResult {
   skillName: string
-  status: 'added' | 'skipped' | 'failed'
+  status: 'added' | 'updated' | 'skipped' | 'failed'
+  path?: string
+  entryFile?: string
+  description?: string
   error?: string
 }
 
 export async function addSkills(options: AddOptions): Promise<AddResult[]> {
-  const { skills: skillNames, targetDir } = options
+  const { skills: skillNames, targetDir, force = false } = options
   const results: AddResult[] = []
 
   for (const skillName of skillNames) {
@@ -29,22 +33,30 @@ export async function addSkills(options: AddOptions): Promise<AddResult[]> {
       continue
     }
 
-    const destPath = join(targetDir, 'skills', skill.name)
+    const destPath = join(targetDir, skill.name)
+    const exists = fileExists(destPath)
 
-    if (fileExists(destPath)) {
+    if (exists && !force) {
       results.push({
         skillName: skill.name,
-        status: 'skipped'
+        status: 'skipped',
+        path: destPath,
+        entryFile: skill.entryFile,
+        description: skill.description
       })
       continue
     }
 
     try {
-      ensureDir(join(targetDir, 'skills'))
+      ensureDir(targetDir)
+      if (exists) removeDir(destPath)
       copyDir(skill.path, destPath)
       results.push({
         skillName: skill.name,
-        status: 'added'
+        status: exists ? 'updated' : 'added',
+        path: destPath,
+        entryFile: skill.entryFile,
+        description: skill.description
       })
     } catch (error) {
       results.push({
@@ -60,11 +72,13 @@ export async function addSkills(options: AddOptions): Promise<AddResult[]> {
 
 export async function addSkill(
   skillName: string,
-  targetDir: string
+  targetDir: string,
+  force = false
 ): Promise<AddResult> {
   const results = await addSkills({
     skills: [skillName],
-    targetDir
+    targetDir,
+    force
   })
   return (
     results[0] ?? {
