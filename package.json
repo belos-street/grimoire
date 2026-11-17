@@ -1,11 +1,11 @@
 {
   "name": "@belos-street/skill-kit",
   "version": "1.0.1",
-  "description": "CLI tool for managing skill documentation - generate agents and skill directories",
+  "description": "CLI tool for installing AI Agent skills into a project's .agents/skills directory",
   "type": "module",
   "main": "./index.ts",
   "bin": {
-    "skill-kit": "./bin/skill-kit"
+    "skill-kit": "./index.ts"
   },
   "scripts": {
     "dev": "bun run ./index.ts -h",
