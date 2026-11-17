@@ -15,11 +15,15 @@
 ```
 skill-kit/
 ├── lib/
-│   ├── cli/                 # 命令：list / add / info
-│   ├── fs/                  # 目录复制、确保存在、删除
-│   ├── generator/           # 安装技能到目标目录（支持 force 覆盖）
-│   ├── logger/              # 终端输出
-│   └── skill/               # 扫描并解析 SKILL.md / skill.md
+│   ├── cli.ts               # CLI 入口与命令注册
+│   ├── commands/            # list / add / status / sync / lint / info
+│   ├── fs.ts                # 目录复制、符号链接、删除
+│   ├── generator.ts         # 安装逻辑与清单写入
+│   ├── lint.ts              # 技能校验
+│   ├── logger.ts            # 终端输出
+│   ├── manifest.ts          # .skill-kit.json 与漂移判断
+│   ├── skill.ts             # 扫描并解析 SKILL.md / skill.md
+│   └── __tests__/           # 核心模块单元测试（bun test）
 ├── scripts/
 │   └── publish.ts           # npm 发布脚本
 ├── skills/                  # 技能源（每个子目录一个 skill）
@@ -48,6 +52,18 @@ bun run ./index.ts add vue pinia --to .agents/skills --json
 # 更新已安装技能
 bun run ./index.ts add vue --to .agents/skills --force
 
+# 查看安装状态（ok / outdated / modified / missing）
+bun run ./index.ts status --to .agents/skills --json
+
+# 更新过期技能（本地改动默认保留，--force 才覆盖）
+bun run ./index.ts sync --to .agents/skills --json
+
+# 符号链接安装（维护技能时用，改动立即生效）
+bun run ./index.ts add vue --to .agents/skills --link --force
+
+# 校验技能
+bun run ./index.ts lint --json
+
 # 交互式安装（仅在终端里给人用）
 bun run ./index.ts add
 
@@ -61,6 +77,11 @@ bun run ./index.ts info <skill-name>
 - `--json` 只输出一个 JSON 对象，不混入日志；任一技能失败时进程退出码为 1。
 - `add` 返回的 `status`：`added` / `updated` / `skipped` / `failed`。
 - 技能根目录解析顺序：`SKILL_KIT_HOME` → 源码相对路径 → `dist`/二进制相对路径 → 当前目录的 `skills/`。
+- 每次成功安装会写入 `<目标目录>/.skill-kit.json`，记录来源、模式、入口文件和内容哈希。
+- `status` 的状态含义：`ok`（与源一致）、`outdated`（源已更新）、`modified`（本地副本被改过）、`missing`（目录丢失）；不在清单中的目录列为 `untracked`。
+- `sync` 只处理清单中的技能：`outdated` / `missing` 自动更新，`modified` 默认跳过，需显式 `--force`。
+- `--link` 只用于本机维护技能：目标项目里是符号链接，源改动立即生效，不要用于需要独立副本的项目。
+- `lint` 的 error 会导致退出码 1，warning 不影响退出码。
 
 ## 4. 在目标项目安装技能（Agent 流程）
 
@@ -80,7 +101,7 @@ bun run ./index.ts info <skill-name>
    bun <KIT_PATH>/index.ts add <name...> --to .agents/skills --json
    ```
 
-   已安装且需要更新时加 `--force`。
+   已安装且需要更新时加 `--force`。日常安装用复制模式；只有在本机维护技能、希望改动即时生效时才加 `--link`。
 4. **更新目标项目的 AGENTS.md**：按返回结果中的 `path` + `entryFile`，只把 `added` / `updated` 的技能增删到「技能导航」表：
 
    ```markdown
@@ -112,6 +133,12 @@ bun run ./index.ts info <skill-name>
 - **禁止删除或修改 `.agents/skills/` 下的自定义技能**（非本工具安装的目录）。`--force` 只用于更新来自本仓库的技能。
 - **禁止直接改目标项目里的技能副本**。需要修改时改本仓库 `skills/<name>/`，再执行 `add --force`。
 - **失败不要静默兜底**：报告 `error`，不要偷偷改用 `cp`。只有 `bun` 不可用时才手工复制，并明确说明后续更新需重新复制。
+
+### 第三方收藏不是可安装技能
+
+`awesome-skills/` 只是社区技能与设计资源的**收藏笔记**（链接、摘要），不是技能目录，CLI 不会扫描它，也不要把里面的文件复制到 `.agents/skills/`。
+
+当 `skills/` 里没有合适技能时：先查 `awesome-skills/` 找到上游仓库，再按上游自己的安装方式处理，并在汇报里注明来源。
 
 ## 5. Skill 目录规范
 
@@ -200,7 +227,7 @@ metadata:
 
 1. 改 `skills/<name>/` 下的源文件，不直接改已安装到其他项目的副本。
 2. 若改动了行为或适用范围，同步更新 `description` 和 README 表格描述。
-3. 需要让目标项目生效时，在目标项目执行 `add <name> --force`。
+3. 需要让目标项目生效时，在目标项目执行 `sync`；只想更新某一个技能时用 `add <name> --force`。
 
 ## 8. 常见问题
 
@@ -230,6 +257,7 @@ metadata:
 ```bash
 bun install                  # 安装依赖
 bun run ./index.ts --help    # 本地运行
+bun run test                 # 跑单元测试（lib/__tests__）
 bun run build                # 构建到 dist/
 bun run publish              # 发布 npm（需 .env 中的 npm_token）
 ```
@@ -243,6 +271,8 @@ bun run publish              # 发布 npm（需 .env 中的 npm_token）
 - [ ] `references/`（或 `reference/`、`rules/`）存在且链接有效
 - [ ] reference 文件有 frontmatter，文件名 kebab-case
 - [ ] `bun run ./index.ts list` 能识别新技能
-- [ ] 安装到临时目录后文件完整
+- [ ] `bun run ./index.ts lint` 无 error
+- [ ] `bun run test` 通过
+- [ ] 安装到临时目录后文件完整、`status` 为 `ok`
 - [ ] README 表格与分类已更新
 - [ ] 没有项目专属内容混入技能

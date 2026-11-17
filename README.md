@@ -10,6 +10,10 @@
 
 - Non-interactive installs for agent use: `add <skill...> --json`
 - Installs to `./.agents/skills` by default (configurable with `--to`)
+- Install manifest (`.skill-kit.json`) with `status` and `sync` drift detection
+- `--link` mode for maintaining skills locally
+- `lint` for frontmatter, reference directories, and broken links
+- Unit tests for the core modules (`bun test`)
 - JSON catalog via `list --json`
 - Duplicate detection with opt-in `--force` overwrite
 - Prints ready-to-paste rows for the skill table in `AGENTS.md`; never rewrites it
@@ -101,6 +105,32 @@ skill-kit add
 ```
 
 After installing, the CLI prints Markdown rows for the skill table in your project's `AGENTS.md`. It deliberately does not edit or overwrite `AGENTS.md`.
+
+Each successful install is recorded in `<target>/.skill-kit.json` (source, mode, entry file, content hash). This enables drift detection:
+
+```bash
+# ok | outdated | modified | missing, plus untracked directories
+skill-kit status --to .agents/skills --json
+
+# Update outdated/missing skills; modified copies are kept unless --force
+skill-kit sync --to .agents/skills --json
+skill-kit sync --to .agents/skills --force
+```
+
+For local skill development, install a symlink instead of a copy so source edits take effect immediately:
+
+```bash
+skill-kit add vue --to .agents/skills --link --force
+```
+
+### Lint Skills
+
+```bash
+skill-kit lint              # all skills
+skill-kit lint vue --json   # specific skill(s)
+```
+
+Checks frontmatter (`name` matches directory, `description` present), reference directories, and broken relative Markdown links. Errors exit with code 1; warnings do not.
 
 ### List Skills as JSON
 
@@ -286,18 +316,17 @@ Detailed documentation and best practices...
 ```
 skill-kit/
 ├── lib/
-│   ├── cli/                 # Command line interface
-│   │   └── index.ts        # CLI commands (list, add, info)
-│   ├── fs/                 # File system utilities
-│   │   └── index.ts        # Copy, ensure, remove directory
-│   ├── generator/          # Skill installer
-│   │   └── index.ts        # Add/update skills in a target directory
-│   ├── logger/             # Logging utilities
-│   │   └── index.ts        # Colorful console output
-│   └── skill/              # Skill management
-│       └── index.ts        # Read and parse SKILL.md/skill.md
+│   ├── cli.ts               # CLI entry and command registration
+│   ├── commands/            # list / add / status / sync / lint / info
+│   ├── fs.ts                # Copy, symlink, ensure, remove
+│   ├── generator.ts         # Install logic and manifest updates
+│   ├── lint.ts              # Frontmatter, references, link checks
+│   ├── logger.ts            # Colorful console output
+│   ├── manifest.ts          # .skill-kit.json, hashing, drift status
+│   ├── skill.ts             # Read and parse SKILL.md/skill.md
+│   └── __tests__/           # Unit tests (bun test)
 ├── scripts/
-│   └── publish.ts          # Publish script
+│   └── publish.ts           # Publish script
 ├── skills/                 # Built-in skills (24 top-level skills)
 │   ├── superpowers/        # Integrated from obra/superpowers (14 sub-skills)
 │   ├── bun/
@@ -323,6 +352,19 @@ bun run ./index.ts list --json
 # Non-interactive install / update
 bun run ./index.ts add vue pinia --to .agents/skills --json
 bun run ./index.ts add vue --to .agents/skills --force
+
+# Link mode for local skill development
+bun run ./index.ts add vue --to .agents/skills --link --force
+
+# Drift detection and update
+bun run ./index.ts status --to .agents/skills --json
+bun run ./index.ts sync --to .agents/skills --json
+
+# Validate skills
+bun run ./index.ts lint --json
+
+# Run unit tests
+bun run test
 
 # Interactive add skills
 bun run ./index.ts add
