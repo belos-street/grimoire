@@ -1,4 +1,4 @@
-# Skill Kit 项目指南（AGENTS.md）
+# Grimoire 项目指南（AGENTS.md）
 
 > 面向 AI Agent 的项目导航：项目定位、目录结构、skill 规范，以及「把技能安装到目标项目」的完整流程。
 > 修改代码或新增 skill 前先读本文件。
@@ -6,33 +6,30 @@
 ## 1. 项目定位
 
 - 本仓库是**可复用 AI Agent skill 的源仓库**，`skills/` 下每个目录是一个可独立安装的技能。
-- `lib/` 是一个小型 CLI，负责把技能**复制**到目标项目的 `.agents/skills/`。
+- `grimoire/` 是一个小型 Python CLI，负责把技能**复制**到目标项目的 `.agents/skills/`。
 - CLI **不生成、不修改**目标项目的 `AGENTS.md`：安装后只打印可粘贴的技能表格行，由 Agent 或用户决定如何写入。
 - 技能保持**项目无关**：项目专属约定应放在目标项目的 `.agents/rules/`，不要写进本仓库。
 
 ## 2. 目录结构
 
 ```
-skill-kit/
-├── lib/
-│   ├── cli.ts               # CLI 入口与命令注册
+grimoire/
+├── grimoire/
+│   ├── cli.py               # CLI 入口与命令注册
 │   ├── commands/            # list / add / status / sync / lint / info
-│   ├── fs.ts                # 目录复制、符号链接、删除
-│   ├── generator.ts         # 安装逻辑与清单写入
-│   ├── lint.ts              # 技能校验
-│   ├── logger.ts            # 终端输出
-│   ├── manifest.ts          # .skill-kit.json 与漂移判断
-│   ├── skill.ts             # 扫描并解析 SKILL.md / skill.md
-│   └── __tests__/           # 核心模块单元测试（bun test）
-├── scripts/
-│   └── publish.ts           # npm 发布脚本
+│   ├── fs.py                # 目录复制、符号链接、删除
+│   ├── generator.py         # 安装逻辑与清单写入
+│   ├── lint.py              # 技能校验
+│   ├── logger.py            # 终端输出
+│   ├── manifest.py          # .grimoire.json 与漂移判断
+│   └── skill.py             # 扫描并解析 SKILL.md / skill.md
+├── tests/                   # 核心模块单元测试（pytest）
 ├── skills/                  # 技能源（每个子目录一个 skill）
 │   ├── superpowers/         # 外壳技能，内含 14 个子技能，只能整体安装
 │   ├── vue/
 │   ├── react-best-practices/
 │   └── ...
-├── index.ts                 # CLI 入口（可执行，shebang 为 bun）
-├── package.json
+├── pyproject.toml
 ├── README.md                # 面向人的使用说明与技能目录
 └── AGENTS.md                # 本文件
 ```
@@ -40,35 +37,37 @@ skill-kit/
 ## 3. CLI 用法
 
 ```bash
+# 以下命令在仓库根目录执行；已安装时可省略 `python -m`
+
 # 人类可读目录
-bun run ./index.ts list
+python -m grimoire list
 
 # Agent 可读目录（JSON）
-bun run ./index.ts list --json
+python -m grimoire list --json
 
 # 非交互安装（默认 .agents/skills）
-bun run ./index.ts add vue pinia --to .agents/skills --json
+python -m grimoire add vue pinia --to .agents/skills --json
 
 # 更新已安装技能
-bun run ./index.ts add vue --to .agents/skills --force
+python -m grimoire add vue --to .agents/skills --force
 
 # 查看安装状态（ok / outdated / modified / missing）
-bun run ./index.ts status --to .agents/skills --json
+python -m grimoire status --to .agents/skills --json
 
 # 更新过期技能（本地改动默认保留，--force 才覆盖）
-bun run ./index.ts sync --to .agents/skills --json
+python -m grimoire sync --to .agents/skills --json
 
 # 符号链接安装（维护技能时用，改动立即生效）
-bun run ./index.ts add vue --to .agents/skills --link --force
+python -m grimoire add vue --to .agents/skills --link --force
 
 # 校验技能
-bun run ./index.ts lint --json
+python -m grimoire lint --json
 
 # 交互式安装（仅在终端里给人用）
-bun run ./index.ts add
+python -m grimoire add
 
 # 查看技能详情
-bun run ./index.ts info <skill-name>
+python -m grimoire info <skill-name>
 ```
 
 约定：
@@ -76,8 +75,8 @@ bun run ./index.ts info <skill-name>
 - `--to` 相对于当前工作目录，默认 `.agents/skills`。
 - `--json` 只输出一个 JSON 对象，不混入日志；任一技能失败时进程退出码为 1。
 - `add` 返回的 `status`：`added` / `updated` / `skipped` / `failed`。
-- 技能根目录解析顺序：`SKILL_KIT_HOME` → 源码相对路径 → `dist`/二进制相对路径 → 当前目录的 `skills/`。
-- 每次成功安装会写入 `<目标目录>/.skill-kit.json`，记录来源、模式、入口文件和内容哈希。
+- 技能根目录解析顺序：`GRIMOIRE_HOME` → 仓库根 `skills/` → 已安装包内 `grimoire/skills/` → 当前目录的 `skills/`。
+- 每次成功安装会写入 `<目标目录>/.grimoire.json`，记录来源、模式、入口文件和内容哈希。
 - `status` 的状态含义：`ok`（与源一致）、`outdated`（源已更新）、`modified`（本地副本被改过）、`missing`（目录丢失）；不在清单中的目录列为 `untracked`。
 - `sync` 只处理清单中的技能：`outdated` / `missing` 自动更新，`modified` 默认跳过，需显式 `--force`。
 - `--link` 只用于本机维护技能：目标项目里是符号链接，源改动立即生效，不要用于需要独立副本的项目。
@@ -85,20 +84,28 @@ bun run ./index.ts info <skill-name>
 
 ## 4. 在目标项目安装技能（Agent 流程）
 
-本机技能源路径：`KIT_PATH="${SKILL_KIT_HOME:-$HOME/code/personal/skill-kit}"`。若该目录不存在，先向用户确认，不要猜测。
+本机技能源路径：`GRIMOIRE_PATH="${GRIMOIRE_HOME:-$HOME/code/personal/grimoire}"`。若该目录不存在，先向用户确认，不要猜测。
+
+首次使用先安装（之后在任意项目里都能直接调用 `grimoire`）：
+
+```bash
+python -m pip install -e "$GRIMOIRE_PATH"
+```
+
+若不想安装，也可以 `cd "$GRIMOIRE_PATH"` 后用 `python -m grimoire` 运行同一套命令。
 
 1. **确认技术栈**：读目标项目的 `package.json`、`go.mod`、`pyproject.toml` 等，不要凭项目名猜。
 2. **查目录**：
 
    ```bash
-   bun <KIT_PATH>/index.ts list --json
+   grimoire list --json
    ```
 
    返回 `[{ name, description, tags, references, entryFile }]`。用 `description` 和 `tags` 匹配。
 3. **安装**：
 
    ```bash
-   bun <KIT_PATH>/index.ts add <name...> --to .agents/skills --json
+   grimoire add <name...> --to .agents/skills --json
    ```
 
    已安装且需要更新时加 `--force`。日常安装用复制模式；只有在本机维护技能、希望改动即时生效时才加 `--link`。
@@ -132,7 +139,7 @@ bun run ./index.ts info <skill-name>
 - **禁止整体重写目标项目的 AGENTS.md**，只允许增删技能表格中对应的行。
 - **禁止删除或修改 `.agents/skills/` 下的自定义技能**（非本工具安装的目录）。`--force` 只用于更新来自本仓库的技能。
 - **禁止直接改目标项目里的技能副本**。需要修改时改本仓库 `skills/<name>/`，再执行 `add --force`。
-- **失败不要静默兜底**：报告 `error`，不要偷偷改用 `cp`。只有 `bun` 不可用时才手工复制，并明确说明后续更新需重新复制。
+- **失败不要静默兜底**：报告 `error`，不要偷偷改用 `cp`。只有 `grimoire` 不可用时才手工复制，并明确说明后续更新需重新复制。
 
 ### 第三方收藏不是可安装技能
 
@@ -209,15 +216,15 @@ metadata:
 4. **验证**：
 
    ```bash
-   bun run ./index.ts list
-   bun run ./index.ts info new-skill-name
+   python -m grimoire list
+   python -m grimoire info new-skill-name
    ```
 
    再安装到临时目录确认文件完整：
 
    ```bash
-   cd /tmp && mkdir -p skill-kit-check && cd skill-kit-check
-   bun <KIT_PATH>/index.ts add new-skill-name --json
+   cd /tmp && mkdir -p grimoire-check && cd grimoire-check
+   grimoire add new-skill-name --json
    ```
 
 5. **更新 README**：在 `Available Skills` 表格加一行（名称、描述、reference 数量），并在 `Skill Categories` 对应分类下加链接。
@@ -241,28 +248,27 @@ metadata:
 目标项目的 `AGENTS.md` 通常由用户手工维护，自动覆盖会破坏内容。CLI 只输出表格行，写入由 Agent 按「只增删对应行」的规则完成。
 
 **Q4：新增 skill 后还需要改 CLI 代码吗？**
-不需要。CLI 扫描 `skills/` 下的所有顶层目录，新增目录会自动出现在 `list` 中。只有需要新的安装行为时才改 `lib/`。
+不需要。CLI 扫描 `skills/` 下的所有顶层目录，新增目录会自动出现在 `list` 中。只有需要新的安装行为时才改 `grimoire/`。
 
 **Q5：`superpowers` 为什么只显示一个条目？**
 它是外壳技能，14 个子技能位于其子目录中，按整体安装，避免拆散后引用失效。
 
 ## 9. 技术栈与开发
 
-- **运行时**：Bun（`index.ts` 通过 shebang 直接执行）
-- **命令行解析**：commander
-- **交互选择**：prompts（仅无参数 `add` 时使用）
-- **终端样式**：chalk
-- **文件操作**：Node.js `fs`
+- **运行时**：Python 3.10+（仅标准库，无运行时依赖）
+- **命令行解析**：argparse
+- **交互选择**：内置 `input()`（仅无参数 `add` 时使用）
+- **终端样式**：ANSI 转义（尊重 `NO_COLOR`）
+- **文件操作**：`pathlib` / `shutil`
 
 ```bash
-bun install                  # 安装依赖
-bun run ./index.ts --help    # 本地运行
-bun run test                 # 跑单元测试（lib/__tests__）
-bun run build                # 构建到 dist/
-bun run publish              # 发布 npm（需 .env 中的 npm_token）
+python -m venv .venv                 # 创建虚拟环境
+pip install -e ".[dev]"              # 安装（含 pytest）
+python -m grimoire --help            # 本地运行
+python -m pytest                     # 跑单元测试（tests/）
 ```
 
-`bunx tsc --noEmit` 会同时检查 `skills/` 下第三方技能的示例脚本，存在历史报错；判断本次改动是否引入类型问题时，只看 `lib/` 下的报错。
+`--link` 在 Windows 上需要开发者模式（或管理员权限）才能创建符号链接。
 
 ## 10. 检查清单
 
@@ -270,9 +276,9 @@ bun run publish              # 发布 npm（需 .env 中的 npm_token）
 - [ ] frontmatter 的 `name` 与目录名一致，`description` 含使用场景/触发词
 - [ ] `references/`（或 `reference/`、`rules/`）存在且链接有效
 - [ ] reference 文件有 frontmatter，文件名 kebab-case
-- [ ] `bun run ./index.ts list` 能识别新技能
-- [ ] `bun run ./index.ts lint` 无 error
-- [ ] `bun run test` 通过
+- [ ] `python -m grimoire list` 能识别新技能
+- [ ] `python -m grimoire lint` 无 error
+- [ ] `python -m pytest` 通过
 - [ ] 安装到临时目录后文件完整、`status` 为 `ok`
 - [ ] README 表格与分类已更新
 - [ ] 没有项目专属内容混入技能
