@@ -1,45 +1,57 @@
-# @belos-street/skill-kit
+# @belos-street/grimoire
 
-> CLI tool for installing AI Agent skills into a project's `.agents/skills/` directory
+> A grimoire of reusable AI Agent skills: third-party integrations, engineering conventions, and workflows.
 
 ## About
 
-`skill-kit` is a CLI tool for installing reusable AI Agent skills into a project. It installs to `.agents/skills/` by default, supports non-interactive JSON output for agent-driven use, and prints the rows to add to the skill table in `AGENTS.md` instead of editing it.
+`grimoire` collects reusable AI Agent skills — curated third-party integrations, personal engineering conventions, and workflows — and installs them into a project. Skills land in `.agents/skills/` by default, the CLI supports non-interactive JSON output for agent-driven use, and it prints the rows to add to the skill table in `AGENTS.md` instead of editing it.
+
+### What's inside
+
+- **Curated third-party skills** — Vue / React / Next.js / React Native, Go, Fastify, NestJS, LangChain, plus the `superpowers` workflow collection.
+- **Personal conventions and methodology** — `belos-street` coding conventions and review checklists, `grill-me` requirement clarification, `vibe-flow` end-to-end Vibe Coding flow, `ai-collab-system-bootstrap`, and a RAG methodology.
+- **A CLI that keeps them in sync** — installs skills into a project's `.agents/skills/`, records what was installed in `.grimoire.json`, and reports `outdated` / `modified` / `missing` copies so updates do not silently clobber local edits.
 
 ## Features
 
 - Non-interactive installs for agent use: `add <skill...> --json`
 - Installs to `./.agents/skills` by default (configurable with `--to`)
-- Install manifest (`.skill-kit.json`) with `status` and `sync` drift detection
+- Install manifest (`.grimoire.json`) with `status` and `sync` drift detection
 - `--link` mode for maintaining skills locally
 - `lint` for frontmatter, reference directories, and broken links
-- Unit tests for the core modules (`bun test`)
+- Unit tests for the core modules (`pytest`)
 - JSON catalog via `list --json`
 - Duplicate detection with opt-in `--force` overwrite
 - Prints ready-to-paste rows for the skill table in `AGENTS.md`; never rewrites it
-- Built with Bun for fast TypeScript execution
+- Zero runtime dependencies, Python 3.10+
 
 ## Installation
 
-### Global Installation
+### Requirements
+
+- Python 3.10+ installed
+
+### Local Setup
+
+This project is distributed as a Git repository. Clone it and install it in editable mode:
 
 ```bash
-npm install -g @belos-street/skill-kit
+git clone https://github.com/belos-street/grimoire.git
+cd grimoire
 
-or
+python -m venv .venv
+# Windows
+.venv\Scripts\activate
+# macOS / Linux
+source .venv/bin/activate
 
-pnpm add -g @belos-street/skill-kit
+pip install -e ".[dev]"
+
+# run the CLI
+grimoire list
 ```
 
-### Using npx
-
-```bash
-npx @belos-street/skill-kit
-
-or
-
-pnpx @belos-street/skill-kit 
-```
+Alternatively, run it without installing: `python -m grimoire list`.
 
 ## Usage
 
@@ -48,7 +60,7 @@ pnpx @belos-street/skill-kit
 View all available skills with descriptions:
 
 ```bash
-skill-kit list
+grimoire list
 ```
 
 Output example:
@@ -74,8 +86,8 @@ Total: 24 skills
 Non-interactive (recommended for agents):
 
 ```bash
-skill-kit add vue pinia --to .agents/skills --json
-skill-kit add vue --to .agents/skills --force   # update an installed skill
+grimoire add vue pinia --to .agents/skills --json
+grimoire add vue --to .agents/skills --force   # update an installed skill
 ```
 
 `--to` defaults to `.agents/skills`. Output is a single JSON object:
@@ -101,33 +113,33 @@ skill-kit add vue --to .agents/skills --force   # update an installed skill
 Interactive (terminal use):
 
 ```bash
-skill-kit add
+grimoire add
 ```
 
 After installing, the CLI prints Markdown rows for the skill table in your project's `AGENTS.md`. It deliberately does not edit or overwrite `AGENTS.md`.
 
-Each successful install is recorded in `<target>/.skill-kit.json` (source, mode, entry file, content hash). This enables drift detection:
+Each successful install is recorded in `<target>/.grimoire.json` (source, mode, entry file, content hash). This enables drift detection:
 
 ```bash
 # ok | outdated | modified | missing, plus untracked directories
-skill-kit status --to .agents/skills --json
+grimoire status --to .agents/skills --json
 
 # Update outdated/missing skills; modified copies are kept unless --force
-skill-kit sync --to .agents/skills --json
-skill-kit sync --to .agents/skills --force
+grimoire sync --to .agents/skills --json
+grimoire sync --to .agents/skills --force
 ```
 
 For local skill development, install a symlink instead of a copy so source edits take effect immediately:
 
 ```bash
-skill-kit add vue --to .agents/skills --link --force
+grimoire add vue --to .agents/skills --link --force
 ```
 
 ### Lint Skills
 
 ```bash
-skill-kit lint              # all skills
-skill-kit lint vue --json   # specific skill(s)
+grimoire lint              # all skills
+grimoire lint vue --json   # specific skill(s)
 ```
 
 Checks frontmatter (`name` matches directory, `description` present), reference directories, and broken relative Markdown links. Errors exit with code 1; warnings do not.
@@ -135,7 +147,7 @@ Checks frontmatter (`name` matches directory, `description` present), reference 
 ### List Skills as JSON
 
 ```bash
-skill-kit list --json
+grimoire list --json
 ```
 
 Returns `[{ name, description, tags, references, entryFile }]`, suitable for agent-driven skill selection.
@@ -145,10 +157,10 @@ Returns `[{ name, description, tags, references, entryFile }]`, suitable for age
 Get detailed information about a specific skill:
 
 ```bash
-skill-kit info <skill-name>
+grimoire info <skill-name>
 
 Example:
-skill-kit info nextjs
+grimoire info nextjs
 
 Output:
 nextjs
@@ -162,6 +174,14 @@ References: 8 files
   title: Next.js
   tags: react, framework, ssr
 ```
+
+### Exit Codes
+
+| Code | Meaning |
+| --- | --- |
+| `0` | Success, including `info` when the skill is not found |
+| `1` | `add`, `sync`, or `lint` reported failures |
+| `2` | Usage error: missing/unknown command or invalid option (argparse default) |
 
 ## Available Skills
 
@@ -314,29 +334,26 @@ Detailed documentation and best practices...
 ## Project Structure
 
 ```
-skill-kit/
-├── lib/
-│   ├── cli.ts               # CLI entry and command registration
+grimoire/
+├── grimoire/
+│   ├── cli.py               # CLI parser and command dispatch
 │   ├── commands/            # list / add / status / sync / lint / info
-│   ├── fs.ts                # Copy, symlink, ensure, remove
-│   ├── generator.ts         # Install logic and manifest updates
-│   ├── lint.ts              # Frontmatter, references, link checks
-│   ├── logger.ts            # Colorful console output
-│   ├── manifest.ts          # .skill-kit.json, hashing, drift status
-│   ├── skill.ts             # Read and parse SKILL.md/skill.md
-│   └── __tests__/           # Unit tests (bun test)
-├── scripts/
-│   └── publish.ts           # Publish script
-├── skills/                 # Built-in skills (24 top-level skills)
-│   ├── superpowers/        # Integrated from obra/superpowers (14 sub-skills)
+│   ├── fs.py                # Copy, symlink, ensure, remove
+│   ├── generator.py         # Install logic and manifest updates
+│   ├── lint.py              # Frontmatter, references, link checks
+│   ├── logger.py            # Colorful console output
+│   ├── manifest.py          # .grimoire.json, hashing, drift status
+│   └── skill.py             # Read and parse SKILL.md/skill.md
+├── tests/                   # pytest suite for the core modules
+├── skills/                  # Built-in skills (24 top-level skills)
+│   ├── superpowers/         # Integrated from obra/superpowers (14 sub-skills)
 │   ├── bun/
 │   ├── nextjs/
 │   ├── pinia/
 │   ├── react/
 │   └── ... (23 other skills)
-├── index.ts                # Entry point
-├── package.json
-├── AGENTS.md               # Agent-facing project guide
+├── pyproject.toml
+├── AGENTS.md                # Agent-facing project guide
 └── README.md
 ```
 
@@ -344,33 +361,33 @@ skill-kit/
 
 ```bash
 # List all skills
-bun run ./index.ts list
+python -m grimoire list
 
 # List as JSON (agent use)
-bun run ./index.ts list --json
+python -m grimoire list --json
 
 # Non-interactive install / update
-bun run ./index.ts add vue pinia --to .agents/skills --json
-bun run ./index.ts add vue --to .agents/skills --force
+python -m grimoire add vue pinia --to .agents/skills --json
+python -m grimoire add vue --to .agents/skills --force
 
 # Link mode for local skill development
-bun run ./index.ts add vue --to .agents/skills --link --force
+python -m grimoire add vue --to .agents/skills --link --force
 
 # Drift detection and update
-bun run ./index.ts status --to .agents/skills --json
-bun run ./index.ts sync --to .agents/skills --json
+python -m grimoire status --to .agents/skills --json
+python -m grimoire sync --to .agents/skills --json
 
 # Validate skills
-bun run ./index.ts lint --json
+python -m grimoire lint --json
 
 # Run unit tests
-bun run test
+python -m pytest
 
 # Interactive add skills
-bun run ./index.ts add
+python -m grimoire add
 
 # View skill info
-bun run ./index.ts info <skill-name>
+python -m grimoire info <skill-name>
 ```
 
 **Note:** The CLI scans top-level directories under `skills/` and accepts either `SKILL.md` or `skill.md`. Reference counts include `references/`, `reference/`, and `rules/`. The 14 sub-skills inside `superpowers/` are installed as part of the `superpowers` collection and are not listed individually by the CLI.
