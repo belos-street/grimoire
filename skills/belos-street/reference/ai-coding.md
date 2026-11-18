@@ -29,7 +29,7 @@ IDE 内助手与 Agent CLI 的共性架构（了解原理才能对症下药）�
 - **检索与上下文构建**：Agent 靠项目文件 / 索引 / 你贴的上下文理解代码库；上下文给全，正确率才高（见 §3）
 - **权限沙箱**：文件读写 / 命令执行都在受控权限内，危险操作有审计
 - **工具调用**：读写文件、跑命令、搜索代码都以工具形式暴露，工具边界 ≈ Agent 能力边界
-- **MCP 集成**：统一协议挂外部数据源（数据库 / API / 文档）——本 skill-kit 即挂载了多个 MCP 服务
+- **MCP 集成**：统一协议挂外部数据源（数据库 / API / 文档）——本仓库（grimoire）即挂载了多个 MCP 服务
 
 主流工具一句话定位（不吹不黑，不写版本断言）：
 
@@ -111,7 +111,7 @@ bun run typecheck && bun run lint && bun run format:check && bun test
 - 子任务规格要独立可验收：每步有输入、输出、验收命令（呼应 §3 上下文工程）
 - 并行任务之间不共享可变状态（各自独立文件 / 模块），避免互相踩
 - 合入前跑全套 typecheck + lint + test 回归（呼应「先验证后信任」）
-- 概念参考 skill-kit `superpowers/`（`writing-plans` / `executing-plans` / `dispatching-parallel-agents` / `subagent-driven-development` / `requesting-code-review`），本文件不重复实现流程细节
+- 概念参考 grimoire 仓库的 `superpowers/`（`writing-plans` / `executing-plans` / `dispatching-parallel-agents` / `subagent-driven-development` / `requesting-code-review`），本文件不重复实现流程细节
 
 ## 速查：一次 AI 写码的标准流程
 
