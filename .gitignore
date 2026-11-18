@@ -1,41 +1,36 @@
-# dependencies (bun install)
-node_modules
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+build/
+dist/
 
-# output
-out
-dist
-*.tgz
-
-# code coverage
-coverage
+# coverage
+coverage/
+htmlcov/
 *.lcov
 
 # logs
-logs
+logs/
 _.log
-report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
-# dotenv environment variable files
+# environment
 .env
-.env.development.local
-.env.test.local
-.env.production.local
-.env.local
-
-# npm config files
-.npmrc
+.env.*
+!.env.example
 
 # caches
-.eslintcache
-.cache
-*.tsbuildinfo
+.cache/
+.mypy_cache/
+.ruff_cache/
 
 # IntelliJ based IDEs
-.idea
+.idea/
 
 # Finder (MacOS) folder config
 .DS_Store
 
-#other
+# local scratch
 skills-main
-test/
